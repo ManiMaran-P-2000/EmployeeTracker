@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="EmployeeTracker1.MAUI.Views.UnlockReasonPage"
+             Title="UnlockReasonPage">
+    <VerticalStackLayout Padding="20">
+        <Label Text="Select a reason for unlocking:" FontSize="Medium" />
+
+        <Picker ItemsSource="{Binding ReasonOptions}" 
+                SelectedItem="{Binding SelectedReason}"
+                Title="Choose a reason" />
+
+        <Editor Text="{Binding ReasonDetails}" 
+                Placeholder="Enter details (optional)" />
+
+        <Button Text="Submit" 
+                Command="{Binding SubmitReasonCommand}" />
+    </VerticalStackLayout>
+</ContentPage>
