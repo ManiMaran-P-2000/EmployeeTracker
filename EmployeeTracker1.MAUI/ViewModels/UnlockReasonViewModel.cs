@@ -1,11 +1,5 @@
 ﻿using EmployeeTracker1.MAUI.Helpers;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace EmployeeTracker1.MAUI.ViewModels
@@ -14,10 +8,6 @@ namespace EmployeeTracker1.MAUI.ViewModels
     {
         private string _selectedReason;
         private string _reasonDetails;
-        public ObservableCollection<string> ReasonOptions { get; } = new ObservableCollection<string>
-        {
-            "Break", "Meeting", "Lunch", "Other"
-        };
 
         public string SelectedReason
         {

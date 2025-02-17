@@ -1,14 +1,9 @@
-﻿using WebSocketSharp;
-using System.Text;
+﻿using Microsoft.AspNetCore.SignalR.Client;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using WebSocketSharp;
 
 namespace EmployeeTrackerApp
 {
@@ -17,32 +12,47 @@ namespace EmployeeTrackerApp
     /// </summary>
     public partial class MainWindow : Window
     {
-        private WebSocket _client;
+        private HubConnection _hubConnection;
 
         public MainWindow()
         {
             InitializeComponent();
             DisableShortcuts();
+
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl("http://localhost:5000/trackerHub")
+                .Build();
+
+            Task.Run(async () => await _hubConnection.StartAsync());
+
+            this.Topmost = true;
+            this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            this.Show();
+            BringToFront();
+
+            this.MouseMove += MainWindow_MouseMove;
         }
 
-        private void Submit_Click(object sender, RoutedEventArgs e)
+        private async void Submit_Click(object sender, RoutedEventArgs e)
         {
             string reason = (ReasonDropdown.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Unknown";
             string details = AdditionalDetails.Text.Trim();
 
-            string dataToSend = $"{reason}|{details}";
-
-            Task.Run(() =>
+            var reasonData = new
             {
-                using (WebSocket client = new WebSocket("ws://localhost:5001/"))
-                {
-                    client.Connect();
-                    client.Send(dataToSend);
-                    client.Close();
-                }
+                Reason = reason,
+                Details = details
+            };
 
-                Dispatcher.Invoke(() => Application.Current.Shutdown());
-            });
+            try
+            {
+                await _hubConnection.InvokeAsync("SendUnlockReason", reasonData);
+                Application.Current.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error sending reason: {ex.Message}");
+            }
         }
 
         private void DisableShortcuts()
@@ -56,15 +66,38 @@ namespace EmployeeTrackerApp
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            this.Activate();
             this.Topmost = true;
+            this.Activate();
             this.Focus();
-
-            Dispatcher.BeginInvoke((Action)(() =>
-            {
-                this.Topmost = true; 
-                this.Focus();
-            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            BringToFront();
         }
+
+        private void BringToFront()
+        {
+            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            SetForegroundWindow(handle);
+        }
+
+        private void ForceShowWindow()
+        {
+            this.Show();
+            this.Activate();
+            this.Focus();
+            BringToFront();
+        }
+
+        private void MainWindow_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!this.IsActive || !this.Topmost)
+            {
+                this.Topmost = true;
+                this.Activate();
+                this.Focus();
+                BringToFront();
+            }
+        }
+
+        [DllImport("user32.dll")]
+        static extern bool SetForegroundWindow(IntPtr hWnd);
     }
 }

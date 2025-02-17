@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Microsoft.AspNetCore.SignalR;
 using System.Diagnostics;
 using System.IO.Pipes;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.ServiceProcess;
-using System.Text;
-using System.Threading.Tasks;
 using System.Timers;
 
 namespace EmployeeTracker1.WindowsService.Services
@@ -14,24 +9,20 @@ namespace EmployeeTracker1.WindowsService.Services
     public class IdleTrackerService : IHostedService, IDisposable
     {
         private readonly ILogger<IdleTrackerService> _logger;
+        private IHubContext<SignalRHub> _hubContext;
         private System.Timers.Timer _timer;
         private const int IdleThresholdMinutes = 30;
         private bool _wasLocked = false;
         private bool _isTrackingEnabled = false;
 
-        public IdleTrackerService(ILogger<IdleTrackerService> logger)
+        public IdleTrackerService(ILogger<IdleTrackerService> logger, IHubContext<SignalRHub> hubContext)
         {
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _timer = new System.Timers.Timer(1000);
-            _timer.Elapsed += CheckIdleTime;
-            _timer.Start();
-
-            StartNamedPipeServer(); // Start listening for messages
-
             _logger.LogInformation("IdleTrackerService started.");
             return Task.CompletedTask;
         }
@@ -45,13 +36,22 @@ namespace EmployeeTracker1.WindowsService.Services
 
         public void EnableTracking()
         {
+            if (_isTrackingEnabled)
+                return;
+
             _isTrackingEnabled = true;
+            _timer = new System.Timers.Timer(1000);
+            _timer.Elapsed += CheckIdleTime;
+            _timer.AutoReset = true;
+            _timer?.Start();
             _logger.LogInformation("Idle tracking enabled.");
+
         }
 
         public void DisableTracking()
         {
             _isTrackingEnabled = false;
+            _timer?.Stop();
             _logger.LogInformation("Idle tracking disabled.");
         }
 
@@ -89,46 +89,11 @@ namespace EmployeeTracker1.WindowsService.Services
             return TimeSpan.Zero;
         }
 
-        private async void StartNamedPipeServer()
-        {
-            _logger.LogInformation("Starting Named Pipe Server...");
-
-            _ = Task.Run(async () =>
-            {
-                while (true)
-                {
-                    try
-                    {
-                        using (var pipeServer = new NamedPipeServerStream("EmployeeTrackerCommandPipe", PipeDirection.InOut, 1, PipeTransmissionMode.Message, PipeOptions.Asynchronous))
-                        {
-                            await pipeServer.WaitForConnectionAsync();
-                            using (var reader = new StreamReader(pipeServer))
-                            {
-                                string message = await reader.ReadLineAsync();
-                                if (!string.IsNullOrEmpty(message))
-                                {
-                                    _logger.LogInformation($"Received message: {message}");
-
-                                    if (message == "START")
-                                        EnableTracking();
-                                    else if (message == "STOP")
-                                        DisableTracking();
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError($"Error in Named Pipe Server: {ex.Message}");
-                    }
-                }
-            });
-        }
-
         private void NotifyUnlockEvent()
         {
             try
             {
+                //_hubContext.Clients.All.SendAsync("OnSystemUnlocked");
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string projectRoot = Directory.GetParent(baseDir).Parent.Parent.Parent.Parent.FullName;
                 string exePath = Path.Combine(projectRoot, @"EmployeeTrackerApp\bin\Debug\net8.0-windows\EmployeeTrackerApp.exe");
@@ -138,29 +103,16 @@ namespace EmployeeTracker1.WindowsService.Services
                 {
                     FileName = exePath,
                     UseShellExecute = true,
-                    WindowStyle = ProcessWindowStyle.Normal
+                    WindowStyle = ProcessWindowStyle.Normal,
                 };
 
                 Process process = Process.Start(startInfo);
-
                 if (process != null)
                 {
-                    process.WaitForInputIdle();
-
-                    IntPtr hWnd = IntPtr.Zero;
-                    int retries = 0;
-
-                    while (hWnd == IntPtr.Zero && retries < 10)
-                    {
-                        Thread.Sleep(500); 
-                        hWnd = process.MainWindowHandle;
-                        retries++;
-                    }
-
-                    if (hWnd != IntPtr.Zero)
-                    {
-                        SetForegroundWindow(hWnd);
-                    }
+                    process.WaitForInputIdle(); // Wait for the process to be ready for input
+                    IntPtr handle = process.MainWindowHandle;
+                    SetForegroundWindow(handle); // Bring the window to the front
+                    ForceShowWindow(handle); // Ensure window is shown
                 }
             }
             catch (Exception ex)
@@ -169,13 +121,28 @@ namespace EmployeeTracker1.WindowsService.Services
             }
         }
 
+        private void ForceShowWindow(IntPtr handle)
+        {
+            // Forcibly bring the window to the front and ensure it's activated
+            SetForegroundWindow(handle);
+            ShowWindow(handle, SW_SHOW);
+            ShowWindow(handle, SW_RESTORE);
+        }
+
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern void LockWorkStation();
+
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        private const int SW_SHOW = 5;
+        private const int SW_RESTORE = 9;
 
         [StructLayout(LayoutKind.Sequential)]
         private struct LASTINPUTINFO
