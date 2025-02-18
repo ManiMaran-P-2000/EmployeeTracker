@@ -5,10 +5,9 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using System.Windows.Interop;
+using System.Windows.Threading;
+using WebSocketSharp;
 
 namespace EmployeeTrackerApp
 {
@@ -17,54 +16,60 @@ namespace EmployeeTrackerApp
     /// </summary>
     public partial class MainWindow : Window
     {
-        private WebSocket _client;
-
         public MainWindow()
         {
             InitializeComponent();
-            DisableShortcuts();
-        }
-
-        private void Submit_Click(object sender, RoutedEventArgs e)
-        {
-            string reason = (ReasonDropdown.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Unknown";
-            string details = AdditionalDetails.Text.Trim();
-
-            string dataToSend = $"{reason}|{details}";
-
-            Task.Run(() =>
-            {
-                using (WebSocket client = new WebSocket("ws://localhost:5001/"))
-                {
-                    client.Connect();
-                    client.Send(dataToSend);
-                    client.Close();
-                }
-
-                Dispatcher.Invoke(() => Application.Current.Shutdown());
-            });
-        }
-
-        private void DisableShortcuts()
-        {
             this.Topmost = true;
-            this.Activate();
-            this.Focus();
-            this.Closing += (s, e) => e.Cancel = true;
-            this.Deactivated += (s, e) => this.Activate();
+            this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+
+            this.Loaded += (s, e) => ForceShowImmediately();
+            this.Activated += (s, e) => ForceShowImmediately();
         }
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        private void ForceShowImmediately()
         {
-            this.Activate();
-            this.Topmost = true;
-            this.Focus();
+            IntPtr hWnd = new WindowInteropHelper(this).Handle;
 
+            // Step 1: Make window transparent to force re-render
+            this.Opacity = 0;
+
+            // Step 2: Bring to front
+            ShowWindow(hWnd, SW_SHOWNORMAL);
+            SetForegroundWindow(hWnd);
+            SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+
+            // Step 3: Force full redraw
+            RedrawWindow(hWnd, IntPtr.Zero, IntPtr.Zero, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+
+            // Step 4: Restore visibility after a slight delay (ensures full refresh)
             Dispatcher.BeginInvoke((Action)(() =>
             {
-                this.Topmost = true; 
+                this.Opacity = 1;
                 this.Focus();
-            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+                this.Activate();
+            }), DispatcherPriority.Render);
         }
+
+        // Windows API Imports
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        [DllImport("user32.dll")]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        [DllImport("user32.dll")]
+        private static extern bool RedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate, uint flags);
+
+        private const int SW_SHOWNORMAL = 1;
+        private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_SHOWWINDOW = 0x0040;
+        private const uint RDW_INVALIDATE = 0x0001;
+        private const uint RDW_UPDATENOW = 0x0008;
+        private const uint RDW_ALLCHILDREN = 0x0080;
     }
 }

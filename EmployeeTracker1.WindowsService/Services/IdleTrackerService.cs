@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipes;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
 using System.Text;
@@ -26,12 +25,6 @@ namespace EmployeeTracker1.WindowsService.Services
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _timer = new System.Timers.Timer(1000);
-            _timer.Elapsed += CheckIdleTime;
-            _timer.Start();
-
-            StartNamedPipeServer(); // Start listening for messages
-
             _logger.LogInformation("IdleTrackerService started.");
             return Task.CompletedTask;
         }
@@ -67,7 +60,7 @@ namespace EmployeeTracker1.WindowsService.Services
                 _wasLocked = true;
                 _logger.LogInformation("System locked due to inactivity.");
             }
-            else if (idleTime < TimeSpan.FromSeconds(5) && _wasLocked)
+            else if (idleTime < TimeSpan.FromSeconds(2) && _wasLocked)
             {
                 _wasLocked = false;
                 NotifyUnlockEvent();
@@ -89,79 +82,24 @@ namespace EmployeeTracker1.WindowsService.Services
             return TimeSpan.Zero;
         }
 
-        private async void StartNamedPipeServer()
-        {
-            _logger.LogInformation("Starting Named Pipe Server...");
-
-            _ = Task.Run(async () =>
-            {
-                while (true)
-                {
-                    try
-                    {
-                        using (var pipeServer = new NamedPipeServerStream("EmployeeTrackerCommandPipe", PipeDirection.InOut, 1, PipeTransmissionMode.Message, PipeOptions.Asynchronous))
-                        {
-                            await pipeServer.WaitForConnectionAsync();
-                            using (var reader = new StreamReader(pipeServer))
-                            {
-                                string message = await reader.ReadLineAsync();
-                                if (!string.IsNullOrEmpty(message))
-                                {
-                                    _logger.LogInformation($"Received message: {message}");
-
-                                    if (message == "START")
-                                        EnableTracking();
-                                    else if (message == "STOP")
-                                        DisableTracking();
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError($"Error in Named Pipe Server: {ex.Message}");
-                    }
-                }
-            });
-        }
-
-        private void NotifyUnlockEvent()
+        private async Task NotifyUnlockEvent()
         {
             try
             {
+                //_hubContext.Clients.All.SendAsync("OnSystemUnlocked");
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string projectRoot = Directory.GetParent(baseDir).Parent.Parent.Parent.Parent.FullName;
                 string exePath = Path.Combine(projectRoot, @"EmployeeTrackerApp\bin\Debug\net8.0-windows\EmployeeTrackerApp.exe");
 
-
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = exePath,
-                    UseShellExecute = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = false,
                     WindowStyle = ProcessWindowStyle.Normal
                 };
 
-                Process process = Process.Start(startInfo);
-
-                if (process != null)
-                {
-                    process.WaitForInputIdle();
-
-                    IntPtr hWnd = IntPtr.Zero;
-                    int retries = 0;
-
-                    while (hWnd == IntPtr.Zero && retries < 10)
-                    {
-                        Thread.Sleep(500); 
-                        hWnd = process.MainWindowHandle;
-                        retries++;
-                    }
-
-                    if (hWnd != IntPtr.Zero)
-                    {
-                        SetForegroundWindow(hWnd);
-                    }
-                }
+                Process.Start(startInfo);
             }
             catch (Exception ex)
             {
@@ -174,9 +112,7 @@ namespace EmployeeTracker1.WindowsService.Services
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern void LockWorkStation();
-        [DllImport("user32.dll")]
-        private static extern bool SetForegroundWindow(IntPtr hWnd);
-
+      
         [StructLayout(LayoutKind.Sequential)]
         private struct LASTINPUTINFO
         {
