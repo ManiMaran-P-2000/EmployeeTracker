@@ -1,8 +1,11 @@
 ﻿using EmployeeTracker1.MAUI.Services;
+using EmployeeTracker1.MAUI.Services.Interface;
 using EmployeeTracker1.MAUI.ViewModels;
 using EmployeeTracker1.MAUI.Views;
 using Microsoft.Extensions.Logging;
-
+#if WINDOWS
+using EmployeeTracker1.MAUI.Platforms.Windows.Services;
+#endif
 namespace EmployeeTracker1.MAUI
 {
     public static class MauiProgram
@@ -18,13 +21,19 @@ namespace EmployeeTracker1.MAUI
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
 
+            builder.Services.AddSingleton<SignalRClientService>();
+            builder.Services.AddSingleton<BackgroundProcessService>();
+
+#if WINDOWS
+            builder.Services.AddSingleton<IWindowRestrictionService, WindowsRestrictionService>();
+#else
+            builder.Services.AddSingleton<IWindowRestrictionService>(provider =>
+                new NullRestrictionService(provider.GetRequiredService<ILogger<NullRestrictionService>>()));
+#endif
 
             builder.Services.AddSingleton<LoginViewModel>();
             builder.Services.AddSingleton<DashboardViewModel>();
             builder.Services.AddSingleton<UnlockReasonViewModel>();
-
-            // Register service
-            builder.Services.AddSingleton<WebSocketServerService>(); 
 
             builder.Services.AddSingleton<LoginPage>();
             builder.Services.AddSingleton<DashboardPage>();
@@ -34,11 +43,20 @@ namespace EmployeeTracker1.MAUI
             builder.Logging.AddDebug();
 #endif
 
-            var app = builder.Build();
-            var webSocketServer = app.Services.GetRequiredService<WebSocketServerService>();
-            Task.Run(() => webSocketServer.StartServer());
-
-            return app;
+            return builder.Build();
         }
+    }
+
+    public class NullRestrictionService : IWindowRestrictionService
+    {
+        private readonly ILogger<NullRestrictionService> _logger;
+
+        public NullRestrictionService(ILogger<NullRestrictionService> logger)
+        {
+            _logger = logger;
+        }
+
+        public void RestrictWindow() => _logger.LogWarning("Window restriction not supported.");
+        public void RestoreWindow() => _logger.LogWarning("Window restoration not supported.");
     }
 }

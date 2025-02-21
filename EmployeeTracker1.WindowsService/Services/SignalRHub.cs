@@ -1,30 +1,32 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using EmployeeTracker1.WindowsService.Services.Interface;
+using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using EmployeeTracker1.WindowsService.Models;
 
 namespace EmployeeTracker1.WindowsService.Services
 {
     public class SignalRHub : Hub
     {
-        private readonly IdleTrackerService _trackerService;
+        private readonly IIdleTracker _tracker;
 
-        public SignalRHub(IdleTrackerService trackerService)
+        public SignalRHub(IIdleTracker tracker)
         {
-            _trackerService = trackerService;
+            _tracker = tracker;
         }
 
         public void SendCommand(string command)
         {
             if (command == "START")
             {
-                _trackerService.EnableTracking();
+                _tracker.EnableTracking();
             }
             else if (command == "STOP")
             {
-                _trackerService.DisableTracking();
+                _tracker.DisableTracking();
             }
         }
 
@@ -32,11 +34,5 @@ namespace EmployeeTracker1.WindowsService.Services
         {
             await Clients.All.SendAsync("ReceiveUnlockReason", data);
         }
-    }
-
-    public class UnlockReasonData
-    {
-        public string Reason { get; set; }
-        public string Details { get; set; }
     }
 }

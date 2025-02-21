@@ -2,18 +2,41 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="EmployeeTracker1.MAUI.Views.UnlockReasonPage"
-             Title="UnlockReasonPage">
-    <VerticalStackLayout Padding="20">
-        <Label Text="Select a reason for unlocking:" FontSize="Medium" />
+             Title="Reason Page"
+             BackgroundColor="#F5F5F5">
 
-        <Picker ItemsSource="{Binding ReasonOptions}" 
+    <VerticalStackLayout Padding="30" Spacing="20" VerticalOptions="Center">
+
+        <Label Text="Please provide a reason:"
+               FontSize="Title"
+               FontAttributes="Bold"
+               HorizontalOptions="Center"
+               TextColor="Black"/>
+
+        <Picker ItemsSource="{Binding ReasonOptions}"
                 SelectedItem="{Binding SelectedReason}"
-                Title="Choose a reason" />
+                Title="Select Reason"
+                FontSize="16"
+                TextColor="Black"
+                BackgroundColor="White"
+                Margin="0,10,0,0"
+                HeightRequest="70"
+                HorizontalOptions="Fill"
+                WidthRequest="600"/>
 
-        <Editor Text="{Binding ReasonDetails}" 
-                Placeholder="Enter details (optional)" />
+        <Frame Style="{StaticResource CommonFrameStyle}">
+            <Editor Text="{Binding ReasonDetails}"
+                    Placeholder="Enter details"
+                    FontSize="14"
+                    BackgroundColor="Transparent"
+                    Margin="10"
+                    HeightRequest="120"
+                    HorizontalOptions="Fill"
+                    VerticalOptions="Fill"/>
+        </Frame>
 
-        <Button Text="Submit" 
-                Command="{Binding SubmitReasonCommand}" />
+        <Button Text="Submit"
+                Command="{Binding SubmitReasonCommand}"
+                Style="{StaticResource CommonButtonStyle}" />
     </VerticalStackLayout>
 </ContentPage>

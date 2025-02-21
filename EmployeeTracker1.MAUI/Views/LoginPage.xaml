@@ -2,10 +2,27 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="EmployeeTracker1.MAUI.Views.LoginPage"
-             Title="LoginPage">
-    <VerticalStackLayout Padding="20">
-        <Entry Placeholder="Email" Text="{Binding Email}" Keyboard="Email"/>
-        <Entry Placeholder="Password" Text="{Binding Password}" IsPassword="True"/>
-        <Button Text="Login" Command="{Binding LoginCommand}"/>
+             Title="Login"
+             BackgroundColor="#F5F5F5">
+
+    <VerticalStackLayout Padding="30" Spacing="20"
+                         VerticalOptions="Center">
+
+        <Label Text="Login"
+               FontSize="Title"
+               HorizontalOptions="Center"/>
+
+        <Frame Style="{StaticResource CommonFrameStyle}">
+            <Entry Placeholder="Email" Text="{Binding Email}" Style="{StaticResource CommonEntryStyle}"/>
+        </Frame>
+
+        <Frame Style="{StaticResource CommonFrameStyle}">
+            <Entry Placeholder="Password" Text="{Binding Password}" Style="{StaticResource CommonEntryStyle}" />
+        </Frame>
+
+        <Button Text="Login"
+                Command="{Binding LoginCommand}"
+                Style="{StaticResource CommonButtonStyle}"/>
+
     </VerticalStackLayout>
 </ContentPage>

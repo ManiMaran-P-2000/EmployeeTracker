@@ -1,28 +1,28 @@
 using EmployeeTracker1.WindowsService;
 using EmployeeTracker1.WindowsService.Services;
+using EmployeeTracker1.WindowsService.Services.Interface;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 
-var builder = Host.CreateDefaultBuilder(args)
-    .UseWindowsService()
-    .ConfigureServices(services =>
-    {
-        services.AddSingleton<IdleTrackerService>();
-        services.AddSignalR();
-        services.AddHostedService<IdleTrackerService>();
-    })
-    .ConfigureWebHostDefaults(webBuilder =>
-    {
-        webBuilder.UseUrls("http://localhost:5000");
-        webBuilder.Configure(app =>
-        {
-            app.UseRouting();
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapHub<SignalRHub>("/trackerHub");
-            });
-        });
-    });
+var builder = WebApplication.CreateBuilder(args);
 
-var host = builder.Build();
-host.Run();
+builder.Services.AddSingleton<IIdleTracker, WindowsIdleTracker>();
+builder.Services.AddSignalR();
+builder.Services.AddLogging(logging => logging.AddConsole());
+
+var app = builder.Build();
+
+app.UseRouting();
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapHub<SignalRHub>("/trackerHub");
+});
+
+var idleTracker = app.Services.GetRequiredService<IIdleTracker>();
+await app.StartAsync();
+
+Console.WriteLine("Background process running. Press Ctrl+C to exit.");
+await Task.Delay(Timeout.Infinite);
+
+idleTracker.DisableTracking();
+await app.StopAsync();

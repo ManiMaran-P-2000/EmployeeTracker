@@ -4,9 +4,9 @@ namespace EmployeeTracker1.MAUI.Views;
 
 public partial class UnlockReasonPage : ContentPage
 {
-	public UnlockReasonPage(UnlockReasonViewModel unlockReasonViewModel)
+	public UnlockReasonPage(UnlockReasonViewModel viewModel)
 	{
 		InitializeComponent();
-		BindingContext = unlockReasonViewModel;
+		BindingContext = viewModel;
 	}
 }

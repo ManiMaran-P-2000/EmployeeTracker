@@ -4,9 +4,9 @@ namespace EmployeeTracker1.MAUI.Views;
 
 public partial class DashboardPage : ContentPage
 {
-	public DashboardPage(DashboardViewModel dashboardViewModel)
+	public DashboardPage(DashboardViewModel viewModel)
 	{
 		InitializeComponent();
-		BindingContext = dashboardViewModel;
+		BindingContext = viewModel;
     }
 }

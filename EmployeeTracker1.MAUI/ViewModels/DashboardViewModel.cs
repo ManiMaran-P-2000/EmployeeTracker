@@ -1,34 +1,31 @@
 ﻿using EmployeeTracker1.MAUI.Helpers;
 using EmployeeTracker1.MAUI.Models;
+using EmployeeTracker1.MAUI.Services;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Diagnostics;
 using System.Windows.Input;
 
 namespace EmployeeTracker1.MAUI.ViewModels
 {
-    public class DashboardViewModel: BaseViewModel
+    public class DashboardViewModel : BaseViewModel
     {
-        private HubConnection _hubConnection;
-
+        private readonly SignalRClientService _signalRService;
+        private readonly BackgroundProcessService _backgroundService;
         public ICommand StartTrackingCommand { get; }
         public ICommand StopTrackingCommand { get; }
 
         public string WelcomeMessage { get; private set; } = "Welcome, User!";
 
-        public DashboardViewModel()
+        public DashboardViewModel(SignalRClientService signalRService, BackgroundProcessService backgroundService)
         {
+            _signalRService = signalRService;
+            _backgroundService = backgroundService;
+
             StartTrackingCommand = new Command(async () => await StartTracking());
             StopTrackingCommand = new Command(async () => await StopTracking());
 
-            _hubConnection = new HubConnectionBuilder()
-                .WithUrl("http://localhost:5000/trackerHub")
-                .Build();
-
-            _hubConnection.On("OnSystemUnlocked", ShowUnlockReasonPrompt);
-            _hubConnection.On<UnlockReasonData>("ReceiveUnlockReason", OnReasonSubmitted);
-
-
-            Task.Run(async () => await _hubConnection.StartAsync());
+            _signalRService.OnSystemUnlocked += async () => await Shell.Current.GoToAsync("///UnlockReasonPage");
+            Task.Run(async () => await _signalRService.StartAsync());
         }
 
         private void OnReasonSubmitted(UnlockReasonData reason)
@@ -38,25 +35,29 @@ namespace EmployeeTracker1.MAUI.ViewModels
 
         private async Task StartTracking()
         {
-            await _hubConnection.InvokeAsync("SendCommand", "START");
+            try
+            {
+                _backgroundService.StartBackgroundProcess();
+                await Task.Delay(1000);
+                await _signalRService.SendCommand("START");
+            }
+            catch (Exception ex)
+            {
+                await Application.Current.MainPage.DisplayAlert("Error", $"Failed to start tracking: {ex.Message}", "OK");
+            }
         }
 
         private async Task StopTracking()
         {
-            await _hubConnection.InvokeAsync("SendCommand", "STOP");
-        }
-        private async void ShowUnlockReasonPrompt()
-        {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string projectRoot = Directory.GetParent(baseDir).Parent.Parent.Parent.Parent.Parent.Parent.FullName;
-            string exePath = Path.Combine(projectRoot, @"EmployeeTrackerApp\bin\Debug\net8.0-windows\EmployeeTrackerApp.exe");
-
-            var psi = new ProcessStartInfo
+            try
             {
-                FileName = exePath,
-                UseShellExecute = true
-            };
-            Process.Start(psi);
+                await _signalRService.SendCommand("STOP");
+                _backgroundService.StopBackgroundProcess();
+            }
+            catch (Exception ex)
+            {
+                await Application.Current.MainPage.DisplayAlert("Error", $"Failed to stop tracking: {ex.Message}", "OK");
+            }
         }
     }
 }

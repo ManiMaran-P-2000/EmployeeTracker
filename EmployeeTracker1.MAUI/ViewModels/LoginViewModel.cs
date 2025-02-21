@@ -14,14 +14,14 @@ namespace EmployeeTracker1.MAUI.ViewModels
         public string Email
         {
             get => _email;
-            set { _email = value; OnPropertyChanged(); }
+            set => SetProperty(ref _email, value);
         }
 
         private string _password;
         public string Password
         {
             get => _password;
-            set { _password = value; OnPropertyChanged(); }
+            set => SetProperty(ref _password, value);
         }
 
         public ICommand LoginCommand { get; }
@@ -33,14 +33,17 @@ namespace EmployeeTracker1.MAUI.ViewModels
 
         private async Task Login()
         {
-            if (true)
+            if (string.IsNullOrEmpty(Email) || string.IsNullOrEmpty(Password))
             {
+                await Application.Current.MainPage.DisplayAlert("Error", "Please enter email and password", "OK");
+                return;
+            }
+
+            bool isAuthenticated = Email == "user@example.com" && Password == "password123";
+            if (isAuthenticated)
                 await Shell.Current.GoToAsync("//DashboardPage");
-            }
             else
-            {
                 await Application.Current.MainPage.DisplayAlert("Error", "Login failed", "OK");
-            }
         }
     }
 }

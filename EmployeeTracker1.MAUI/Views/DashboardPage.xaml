@@ -3,9 +3,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="EmployeeTracker1.MAUI.Views.DashboardPage"
              Title="DashboardPage">
-    <VerticalStackLayout Padding="20">
-        <Label Text="{Binding WelcomeMessage}" FontSize="Large" HorizontalOptions="Center"/>
-        <Button Text="Start Tracking" Command="{Binding StartTrackingCommand}" />
-        <Button Text="Cancel Tracking" Command="{Binding StopTrackingCommand}" />
+    
+    <VerticalStackLayout  Padding="30" Spacing="20"
+                         VerticalOptions="Center">
+        
+        <Label Text="{Binding WelcomeMessage}" FontSize="Title" HorizontalOptions="Center"/>
+        <Button Text="Start Tracking" Command="{Binding StartTrackingCommand}" Style="{StaticResource CommonButtonStyle}" />
+        <Button Text="Cancel Tracking" Command="{Binding StopTrackingCommand}" Style="{StaticResource CommonButtonStyle}" />
     </VerticalStackLayout>
 </ContentPage>
