@@ -58,6 +58,7 @@ namespace EmployeeTracker1.WindowsService.Services
                 LockSystem();
                 _wasLocked = true;
                 _logger.LogInformation("System locked due to inactivity.");
+                NotifyLockEventAsync().GetAwaiter().GetResult();
             }
             else if (idleTime < TimeSpan.FromSeconds(5) && _wasLocked)
             {
@@ -82,6 +83,18 @@ namespace EmployeeTracker1.WindowsService.Services
         public void LockSystem()
         {
             LockWorkStation();
+        }
+
+        private async Task NotifyLockEventAsync()
+        {
+            try
+            {
+                await _hubContext.Clients.All.SendAsync("OnSystemLocked");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to notify lock event: {ex.Message}");
+            }
         }
 
         private async Task NotifyUnlockEventAsync()

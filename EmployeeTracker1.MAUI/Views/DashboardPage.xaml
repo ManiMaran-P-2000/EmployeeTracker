@@ -8,6 +8,7 @@
                          VerticalOptions="Center">
         
         <Label Text="{Binding WelcomeMessage}" FontSize="Title" HorizontalOptions="Center"/>
+        <Label Text="{Binding ElapsedTime, StringFormat='Elapsed Time: {0:hh\\:mm\\:ss}'}" FontSize="Large" HorizontalOptions="Center" />
         <Button Text="Start Tracking" Command="{Binding StartTrackingCommand}" Style="{StaticResource CommonButtonStyle}" />
         <Button Text="Cancel Tracking" Command="{Binding StopTrackingCommand}" Style="{StaticResource CommonButtonStyle}" />
     </VerticalStackLayout>

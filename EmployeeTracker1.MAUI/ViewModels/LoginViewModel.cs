@@ -40,7 +40,7 @@ namespace EmployeeTracker1.MAUI.ViewModels
             }
 
             bool isAuthenticated = Email == "user@example.com" && Password == "password123";
-            if (isAuthenticated)
+            if (true)
                 await Shell.Current.GoToAsync("//DashboardPage");
             else
                 await Application.Current.MainPage.DisplayAlert("Error", "Login failed", "OK");

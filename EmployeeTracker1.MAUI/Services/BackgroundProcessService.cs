@@ -53,11 +53,17 @@ namespace EmployeeTracker1.MAUI.Services
                 _backgroundProcess.OutputDataReceived += (sender, args) => _logger.LogInformation(args.Data);
                 _backgroundProcess.ErrorDataReceived += (sender, args) => _logger.LogError(args.Data);
 
-                _backgroundProcess.Start();
-                _backgroundProcess.BeginOutputReadLine();
-                _backgroundProcess.BeginErrorReadLine();
-
-                _logger.LogInformation("Background process started.");
+                bool started = _backgroundProcess.Start();
+                if (started)
+                {
+                    _backgroundProcess.BeginOutputReadLine();
+                    _backgroundProcess.BeginErrorReadLine();
+                    _logger.LogInformation("Background process started successfully with PID: {ProcessId}", _backgroundProcess.Id);
+                }
+                else
+                {
+                    _logger.LogError("Failed to start background process: Process.Start returned false.");
+                }
             }
             catch (Exception ex)
             {
@@ -83,6 +89,10 @@ namespace EmployeeTracker1.MAUI.Services
             {
                 _logger.LogError($"Failed to stop background process: {ex.Message}");
             }
+        }
+        public bool IsProcessRunning()
+        {
+            return _backgroundProcess != null && !_backgroundProcess.HasExited;
         }
     }
 }

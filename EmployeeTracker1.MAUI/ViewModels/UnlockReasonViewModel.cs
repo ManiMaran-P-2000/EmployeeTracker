@@ -28,6 +28,7 @@ namespace EmployeeTracker1.MAUI.ViewModels
             set { _reasonDetails = value; OnPropertyChanged(); }
         }
 
+        public event Action ReasonSubmitted;
         public ICommand SubmitReasonCommand { get; }
 
         public UnlockReasonViewModel(SignalRClientService signalRService, IWindowRestrictionService windowRestrictionService)
@@ -42,10 +43,25 @@ namespace EmployeeTracker1.MAUI.ViewModels
                 "Break",
                 "Other"
             };
-            SelectedReason = ReasonOptions.First();
 
             SubmitReasonCommand = new Command(async () => await SubmitReason());
+        }
+
+        public void OnAppearing()
+        {
+            ResetValues();
             _windowRestrictionService.RestrictWindow();
+        }
+
+        public void OnDisappearing()
+        {
+            _windowRestrictionService.RestoreWindow();
+        }
+
+        private void ResetValues()
+        {
+            SelectedReason = ReasonOptions.First(); 
+            ReasonDetails = string.Empty;
         }
 
         private async Task SubmitReason()
@@ -59,6 +75,7 @@ namespace EmployeeTracker1.MAUI.ViewModels
             {
                 _windowRestrictionService.RestoreWindow();
                 await Shell.Current.GoToAsync("//DashboardPage");
+                ReasonSubmitted?.Invoke();
             }
             catch (Exception ex)
             {

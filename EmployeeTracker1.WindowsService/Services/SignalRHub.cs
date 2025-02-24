@@ -29,10 +29,5 @@ namespace EmployeeTracker1.WindowsService.Services
                 _tracker.DisableTracking();
             }
         }
-
-        public async Task SendUnlockReason(UnlockReasonData data)
-        {
-            await Clients.All.SendAsync("ReceiveUnlockReason", data);
-        }
     }
 }

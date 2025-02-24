@@ -15,6 +15,7 @@ namespace EmployeeTracker1.MAUI.Services
         private readonly ILogger<SignalRClientService> _logger;
 
         public event Action OnSystemUnlocked;
+        public event Action OnSystemLocked;
         public event Action<UnlockReasonData> OnReasonReceived;
 
         public SignalRClientService(ILogger<SignalRClientService> logger)
@@ -27,10 +28,21 @@ namespace EmployeeTracker1.MAUI.Services
                 .Build();
 
             _hubConnection.On("OnSystemUnlocked", () => OnSystemUnlocked?.Invoke());
-            _hubConnection.On<UnlockReasonData>("ReceiveUnlockReason", (reason) => OnReasonReceived?.Invoke(reason));
+            _hubConnection.On("OnSystemLocked", () => OnSystemLocked?.Invoke());
         }
 
-        public async Task StartAsync() => await _hubConnection.StartAsync();
+        public async Task StartAsync()
+        {
+            try
+            {
+                await _hubConnection.StartAsync();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
         public async Task StopAsync() => await _hubConnection.StopAsync();
         public async Task SendCommand(string command) => await _hubConnection.InvokeAsync("SendCommand", command);
     }
